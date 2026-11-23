@@ -24,6 +24,7 @@
     <a href="{% url 'records' %}" class="{% if request.resolver_match.url_name == 'records' or request.resolver_match.url_name == 'upload_gpx' %}active{% endif %}">打卡记录</a>
     <a href="{% url 'explanations' %}" class="{% if request.resolver_match.url_name == 'explanations' %}active{% endif %}">调整解释</a>
     <a href="{% url 'push_center' %}" class="{% if request.resolver_match.url_name == 'push_center' %}active{% endif %}">消息推送</a>
+    <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' or request.resolver_match.url_name == 'account_danger' %}active{% endif %}">跑者档案</a>
     {% if nav_profile.is_admin %}
     <a href="{% url 'manage_home' %}" class="{% if 'manage' in request.resolver_match.url_name %}active{% endif %}">管理端</a>
     {% endif %}
