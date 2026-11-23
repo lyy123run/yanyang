@@ -133,6 +133,59 @@ def profile_view(request):
     })
 
 
+# ------------------------------------------------------------------ 账号与数据
+@login_required
+def account_danger(request):
+    """危险操作页：重置训练数据 / 永久注销账号。"""
+    user = request.user
+    counts = {
+        "plans": Plan.objects.filter(user=user).count(),
+        "workouts": Workout.objects.filter(user=user).count(),
+        "records": Record.objects.filter(user=user).count(),
+        "explanations": ExplanationRecord.objects.filter(user=user).count(),
+        "pushlogs": PushLog.objects.filter(user=user).count(),
+    }
+    return render(request, "account_danger.html", {"counts": counts})
+
+
+@login_required
+@require_http_methods(["POST"])
+def account_reset(request):
+    """清空全部训练数据但保留账号；需要输入登录密码确认。"""
+    user = request.user
+    password = request.POST.get("password", "")
+    if not user.check_password(password):
+        messages.error(request, "密码不正确，未执行重置")
+        return redirect("account_danger")
+    with transaction.atomic():
+        Plan.objects.filter(user=user).delete()          # 级联删除课表
+        Record.objects.filter(user=user).delete()        # 级联删除轨迹点
+        ExplanationRecord.objects.filter(user=user).delete()
+        PushLog.objects.filter(user=user).delete()
+        Profile.objects.filter(user=user).update(
+            five_k_seconds=0, five_k_date=None, weekly_base_km=40.0)
+    messages.success(request, "全部训练数据已清空，账号保留，可重新开始")
+    return redirect("profile")
+
+
+@login_required
+@require_http_methods(["POST"])
+def account_delete(request):
+    """永久注销账号并级联删除全部数据；需要输入登录密码确认。"""
+    user = request.user
+    if user.is_staff or get_profile(user).role == "admin":
+        messages.error(request, "管理员账号不支持自助注销，请联系系统管理员")
+        return redirect("account_danger")
+    password = request.POST.get("password", "")
+    if not user.check_password(password):
+        messages.error(request, "密码不正确，未执行注销")
+        return redirect("account_danger")
+    from django.contrib.auth import logout as auth_logout
+    auth_logout(request)
+    user.delete()
+    return redirect("login")
+
+
 @login_required
 @require_http_methods(["POST"])
 def plan_create(request):

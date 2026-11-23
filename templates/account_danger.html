@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}账号与数据 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+
+<div class="card">
+  <h2>账号与数据管理</h2>
+  <p class="help">当前账号下的数据：计划 {{ counts.plans }} 个 · 课表 {{ counts.workouts }} 条 ·
+    打卡 {{ counts.records }} 条 · 调整解释 {{ counts.explanations }} 条 · 推送日志 {{ counts.pushlogs }} 条</p>
+</div>
+
+<div class="grid g2">
+  <div class="card" style="border-color:#f0d6ac;background:#fffaf2">
+    <h2 style="color:#8a5312">重置训练数据</h2>
+    <p class="help">清空计划、课表、打卡、调整解释、推送日志和 5K 成绩，<strong>账号保留</strong>，之后可重新填写档案并生成新计划。此操作不可恢复。</p>
+    <form method="post" action="{% url 'account_reset' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="id_pw_reset">请输入登录密码确认</label>
+        <input class="input" id="id_pw_reset" type="password" name="password" required>
+      </div>
+      <button class="btn warn" type="submit"
+              onclick="return confirm('确定清空全部训练数据吗？此操作不可恢复。')">确认重置数据</button>
+    </form>
+  </div>
+
+  <div class="card" style="border-color:#f3c2c2;background:#fdf5f5">
+    <h2 style="color:#8f1d1d">永久注销账号</h2>
+    <p class="help">账号及其<strong>全部数据将被永久删除</strong>（含档案、计划、打卡、日志），无法恢复。注销后自动返回登录页。</p>
+    <form method="post" action="{% url 'account_delete' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="id_pw_delete">请输入登录密码确认</label>
+        <input class="input" id="id_pw_delete" type="password" name="password" required>
+      </div>
+      <button class="btn" style="background:#b91c1c;border-color:#b91c1c" type="submit"
+              onclick="return confirm('确定永久注销账号吗？全部数据将删除且无法恢复。')">确认注销账号</button>
+    </form>
+  </div>
+</div>
+
+<p><a class="btn ghost" href="{% url 'profile' %}">返回档案页</a></p>
+{% endblock %}
