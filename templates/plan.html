@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}16 周课表 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="sec-title">
+    <h2>16 周马拉松课表 <small>VDOT {{ plan.vdot|floatformat:1 }} · 开始 {{ plan.start_date }}</small></h2>
+    <div>
+      <a class="btn ghost sm" href="{% url 'plan_export' %}">导出 CSV</a>
+      <a class="btn ghost sm" href="{% url 'checkin' %}">去打卡</a>
+    </div>
+  </div>
+  <p class="help">每行显示“原计划 → 调整后”。触发规则后系统新增 adjusted 版本，原计划保留为历史版本，两种颜色区分。</p>
+  <div id="timeline" style="height:220px;margin-top:10px"></div>
+</div>
+
+{% for w in weeks %}
+<div class="week" {% if w.no == focus_no %}style="border-color:#9ecdd8"{% endif %}>
+  <div class="week-head">
+    <span>
+      第 {{ w.no }} 周 · {{ w.phase }}
+      {% if w.no == week_no %}<span class="badge ok">当前周</span>{% endif %}
+      <span class="meta">{{ w.start|date:"m-d" }} ~ {{ w.end|date:"m-d" }}</span>
+    </span>
+    <span class="meta">
+      跑量 {{ w.total_eff|floatformat:1 }} km
+      {% if w.adjusted_count %}<span class="diff">（原 {{ w.total_plan|floatformat:1 }} km，{{ w.adjusted_count }} 课已调整）</span>{% endif %}
+    </span>
+  </div>
+  {% for item in w.workouts %}
+    <div class="day">
+      <div class="d">{{ item.o.date|date:"m-d D" }}</div>
+      <div>
+        <span class="badge {{ item.eff.wtype|default:item.o.wtype }}">{% if item.eff %}{{ item.eff.type_label }}{% else %}{{ item.o.type_label }}{% endif %}</span>
+      </div>
+      <div>
+        {% if item.eff %}
+          <strong>{{ item.eff.distance_km|floatformat:1 }} km</strong>
+          · {{ item.eff.pace_display }}
+          <div class="adjnote">原计划 {{ item.o.distance_km|floatformat:1 }} km · {{ item.o.pace_display }}｜{{ item.eff.adjust_reason }}</div>
+        {% else %}
+          {% if item.o.wtype == "REST" %}休息{% else %}<strong>{{ item.o.distance_km|floatformat:1 }} km</strong> · {{ item.o.pace_display }}{% endif %}
+        {% endif %}
+      </div>
+      <div class="help" style="font-size:12px">{{ item.o.detail|truncatechars:70 }}</div>
+      <div>
+        {% if item.o.status == "completed" %}<span class="badge ok">已完成</span>
+        {% elif item.o.status == "missed" %}<span class="badge fail">未完成</span>
+        {% else %}<span class="badge">待完成</span>{% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const tl = {{ timeline|safe }};
+  const el = document.getElementById('timeline');
+  const chart = echarts.init(el);
+  chart.setOption({
+    grid:{left:46,right:16,top:44,bottom:30},
+    tooltip:{trigger:'axis'},
+    legend:{top:2,left:60,itemWidth:12,itemHeight:8,itemGap:18,textStyle:{fontSize:11}},
+    xAxis:{type:'category',data:tl.map(d=>'W'+d.week)},
+    yAxis:[{type:'value',name:'km',scale:true},
+           {type:'value',name:'调整课次',splitLine:{show:false},axisLabel:{show:false},max:6}],
+    series:[
+      {name:'原计划跑量',type:'bar',data:tl.map(d=>d.plan),barMaxWidth:16,
+       itemStyle:{color:'#cfdfe7'},barGap:'-100%'},
+      {name:'调整后跑量',type:'bar',data:tl.map(d=>d.eff),barMaxWidth:16,
+       itemStyle:{color:'#0e7490'},barGap:'-100%'},
+      {name:'调整课次数',type:'line',yAxisIndex:1,symbol:'circle',symbolSize:5,
+       itemStyle:{color:'#b45309'},data:tl.map(d=>d.adjusted)}
+    ]
+  });
+  window.addEventListener('resize',()=>chart.resize());
+</script>
+{% endblock %}

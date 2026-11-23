@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}注册 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>注册跑者账号</h1>
+    <p class="sub">注册后填写 5K 成绩与静息心率，系统即可推算 VDOT 与 16 周课表</p>
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="err">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button class="btn" type="submit">注册</button>
+      <a class="btn ghost" href="{% url 'login' %}">返回登录</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

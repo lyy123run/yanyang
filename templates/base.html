@@ -1,0 +1,56 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}马拉松自适应训练系统{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/echarts.min.js' %}"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">RUN</span>
+    <div>
+      <div class="brand-title">马拉松自适应训练系统</div>
+      <div class="brand-sub">VDOT 配速 · 规则引擎 · 可解释调整</div>
+    </div>
+  </div>
+  {% if user.is_authenticated %}
+  <nav class="nav">
+    <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">仪表盘</a>
+    <a href="{% url 'plan' %}" class="{% if request.resolver_match.url_name == 'plan' %}active{% endif %}">训练课表</a>
+    <a href="{% url 'checkin' %}" class="{% if request.resolver_match.url_name == 'checkin' %}active{% endif %}">训练打卡</a>
+    <a href="{% url 'records' %}" class="{% if request.resolver_match.url_name == 'records' or request.resolver_match.url_name == 'upload_gpx' %}active{% endif %}">打卡记录</a>
+    <a href="{% url 'explanations' %}" class="{% if request.resolver_match.url_name == 'explanations' %}active{% endif %}">调整解释</a>
+    <a href="{% url 'push_center' %}" class="{% if request.resolver_match.url_name == 'push_center' %}active{% endif %}">消息推送</a>
+    {% if nav_profile.is_admin %}
+    <a href="{% url 'manage_home' %}" class="{% if 'manage' in request.resolver_match.url_name %}active{% endif %}">管理端</a>
+    {% endif %}
+  </nav>
+  <div class="userbox">
+    <span class="who">{{ user.username }}{% if nav_profile.is_admin %}<em>管理者</em>{% else %}<em>跑者</em>{% endif %}</span>
+    <form method="post" action="{% url 'logout' %}" style="margin:0">
+      {% csrf_token %}
+      <button class="logout" type="submit">退出</button>
+    </form>
+  </div>
+  {% endif %}
+</header>
+
+<main class="wrap">
+  {% if messages %}
+    <div class="messages">
+      {% for m in messages %}
+        <div class="msg {{ m.tags }}">{{ m }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="foot">
+  基于 Django + 丹尼尔斯 VDOT + 轻量级产生式规则引擎 · 规则可配置 / 调整可解释 / 安全规则优先
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

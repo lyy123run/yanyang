@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}调整解释日志 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>规则解释日志 <small>事实输入 → 规则匹配 → 动作执行 → 解释记录 → 可视化追溯</small></h2>
+  <p class="help">每一次打卡的规则判断都会留痕：命中哪些规则、最终执行哪条、其余为何未执行，均可追溯。</p>
+
+  {% for e in page.object_list %}
+    <div class="explain {% if not e.applied %}skip{% endif %}">
+      <div class="t">
+        {{ e.created_at|date:"Y-m-d H:i" }} ·
+        {% if e.rule_code == "NONE" %}无规则命中{% else %}{{ e.rule_code }} {{ e.rule.name|default:"" }}{% endif %}
+        <span class="badge {% if e.applied %}ok{% else %}fail{% endif %}">
+          {% if e.applied %}已执行{% else %}未执行{% endif %}</span>
+      </div>
+      <div class="m">匹配条件：{{ e.matched_expr|truncatechars:180 }}</div>
+      <div class="a">{{ e.action_text }}</div>
+      {% if e.affected_dates %}<div class="m">受影响课次：{{ e.affected_dates }}</div>{% endif %}
+      {% if e.skip_reason %}<div class="m">未执行原因：{{ e.skip_reason }}</div>{% endif %}
+      <div class="m">事实快照：{% for k, v in e.facts.items %}{{ k }}={{ v }} · {% endfor %}</div>
+    </div>
+  {% empty %}
+    <p class="help">还没有解释记录，去完成一次训练打卡。</p>
+  {% endfor %}
+
+  {% if page.has_other_pages %}
+  <div class="form-actions" style="margin-top:12px">
+    {% if page.has_previous %}<a class="btn ghost sm" href="?page={{ page.previous_page_number }}">上一页</a>{% endif %}
+    <span class="help">第 {{ page.number }} / {{ page.paginator.num_pages }} 页</span>
+    {% if page.has_next %}<a class="btn ghost sm" href="?page={{ page.next_page_number }}">下一页</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}管理端 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="stat"><div class="k">规则总数 / 启用</div><div class="v">{{ rule_count }}<span class="u">/ {{ enabled_count }}</span></div><div class="hint">可在后台修改阈值、优先级</div></div>
+  <div class="stat"><div class="k">跑者账号</div><div class="v">{{ runner_count }}</div><div class="hint">数据按用户隔离</div></div>
+  <div class="stat"><div class="k">打卡记录</div><div class="v">{{ record_count }}</div><div class="hint">手动 + GPX/TCX 导入</div></div>
+  <div class="stat"><div class="k">解释记录</div><div class="v">{{ explain_count }}</div><div class="hint">规则触发全留痕</div></div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="sec-title">
+      <h2>规则配置（R01–R06）</h2>
+      <a class="btn sm" href="{% url 'manage_rules' %}">新增 / 编辑规则</a>
+    </div>
+    <p class="help">规则阈值、优先级、安全标记全部存于数据库，改配置即可生效，无需改动代码。</p>
+    <table>
+      <thead><tr><th>编号</th><th>规则</th><th>优先级</th><th>尺度</th><th>状态</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rules %}
+        <tr>
+          <td><strong>{{ r.code }}</strong>{% if r.safety_flag %} <span class="badge fail">安全</span>{% endif %}</td>
+          <td>{{ r.name }}<div class="help" style="font-size:11px">{{ r.action_type }}</div></td>
+          <td>{{ r.priority }}</td>
+          <td>{{ r.get_scale_display }}</td>
+          <td>{% if r.enabled %}<span class="badge ok">启用</span>{% else %}<span class="badge">停用</span>{% endif %}</td>
+          <td>
+            <a class="btn ghost sm" href="{% url 'manage_rule_edit' r.pk %}">编辑</a>
+            <form method="post" action="{% url 'manage_rule_toggle' r.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button class="btn ghost sm" type="submit">{% if r.enabled %}停用{% else %}启用{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="form-actions" style="margin-top:12px">
+      <a class="btn ghost sm" href="/admin/core/rule/">进入 Django Admin 规则表</a>
+      <a class="btn ghost sm" href="{% url 'manage_push' %}">推送渠道配置</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>跑者账号（数据隔离）</h2>
+    <table>
+      <thead><tr><th>账号</th><th>角色</th><th>5K</th><th>HRrest</th><th>周跑量</th></tr></thead>
+      <tbody>
+      {% for p in users %}
+        <tr><td>{{ p.user.username }}</td><td>{{ p.get_role_display }}</td>
+            <td>{{ p.five_k_display }}</td><td>{{ p.hr_rest }}</td><td>{{ p.weekly_base_km }} km</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="help" style="margin-top:8px">
+      管理者只维护基础参数与账号，<strong>不直接修改用户的 ATL/CTL 与课表结果</strong>，保证算法结果客观。
+    </p>
+
+    <h2 style="margin-top:18px">最近规则触发</h2>
+    <table>
+      <tbody>
+      {% for e in recent_logs %}
+        <tr><td style="width:90px">{{ e.created_at|date:"m-d H:i" }}</td>
+            <td>{{ e.user.username }}</td>
+            <td>{{ e.rule_code }}</td>
+            <td class="help">{{ e.action_text|truncatechars:46 }}</td></tr>
+      {% empty %}
+        <tr><td class="help">暂无</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:18px">推送日志</h2>
+    <table>
+      <tbody>
+      {% for l in push_logs %}
+        <tr><td style="width:90px">{{ l.created_at|date:"m-d H:i" }}</td>
+            <td>{{ l.user.username }}</td><td>{{ l.get_channel_display }}</td>
+            <td><span class="badge {% if l.status == 'success' %}ok{% elif l.status == 'failed' %}fail{% else %}dry{% endif %}">{{ l.get_status_display }}</span></td></tr>
+      {% empty %}
+        <tr><td class="help">暂无</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

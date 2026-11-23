@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}打卡记录 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="sec-title">
+    <h2>打卡记录 <small>累计 {{ total_km }} km</small></h2>
+    <div>
+      <a class="btn ghost sm" href="{% url 'upload_gpx' %}">导入 GPX / TCX</a>
+      <a class="btn sm" href="{% url 'checkin' %}">手动打卡</a>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>日期</th><th>来源</th><th>距离</th><th>时长</th><th>配速</th>
+          <th>平均心率</th><th>RPE</th><th>TRIMP</th><th>完成率</th></tr>
+    </thead>
+    <tbody>
+      {% for r in page.object_list %}
+      <tr>
+        <td>{{ r.date }}</td>
+        <td><span class="badge {% if r.source != 'manual' %}ok{% endif %}">{{ r.get_source_display }}</span></td>
+        <td>{{ r.distance_km|floatformat:2 }} km</td>
+        <td>{{ r.duration_min|floatformat:0 }} min</td>
+        <td>{{ r.pace_display }}</td>
+        <td>{{ r.avg_hr|default:"—" }}</td>
+        <td>{{ r.rpe }}</td>
+        <td>{{ r.trimp|floatformat:1 }}
+          <div class="help" style="font-size:11px">{{ r.get_load_method_display }}</div></td>
+        <td>{{ r.completion_pct }}%</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="help">还没有打卡记录</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if page.has_other_pages %}
+  <div class="form-actions" style="margin-top:12px">
+    {% if page.has_previous %}<a class="btn ghost sm" href="?page={{ page.previous_page_number }}">上一页</a>{% endif %}
+    <span class="help">第 {{ page.number }} / {{ page.paginator.num_pages }} 页</span>
+    {% if page.has_next %}<a class="btn ghost sm" href="?page={{ page.next_page_number }}">下一页</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}消息推送 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="grid g2">
+  <div class="card">
+    <div class="sec-title">
+      <h2>训练方案推送 <small>邮箱 + 微信服务号</small></h2>
+      <form method="post" style="margin:0">
+        {% csrf_token %}
+        <button class="btn" type="submit" name="action" value="send">立即推送本周计划</button>
+      </form>
+    </div>
+    <p class="help">
+      推送内容由规则引擎生成后的课表自动组装：本周课表、最近一次调整原因、CTL/ATL/TSB/ACWR 指标。
+      邮箱走 SMTP（依赖邮箱地址），微信走服务号模板消息（依赖 OpenID），<strong>二者都不需要手机号</strong>。
+    </p>
+    <div class="field">
+      <label>邮件标题</label>
+      <input class="input" value="{{ subject }}" readonly>
+    </div>
+    <label>正文预览</label>
+    <pre class="code">{{ body }}</pre>
+  </div>
+
+  <div class="card">
+    <h2>接收设置</h2>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <div class="field">
+        <label>接收邮箱</label>
+        <input class="input" type="email" name="notify_email" value="{{ profile.notify_email }}">
+      </div>
+      <div class="field">
+        <label>微信 OpenID（服务号授权后获得，可留空）</label>
+        <input class="input" name="wechat_openid" value="{{ profile.wechat_openid }}">
+      </div>
+      <div class="field">
+        <label style="display:flex;gap:8px;align-items:center;color:#334b5c">
+          <input type="checkbox" name="email_notify" {% if profile.email_notify %}checked{% endif %}>
+          开启邮箱推送
+        </label>
+      </div>
+      <button class="btn ghost" type="submit">保存设置</button>
+    </form>
+
+    <h2 style="margin-top:22px">渠道状态</h2>
+    <table>
+      <tbody>
+        <tr><th style="width:110px">邮箱渠道</th>
+            <td>{% if profile.notify_email %}<span class="badge ok">已配置收件人</span>{% else %}<span class="badge fail">未填写邮箱</span>{% endif %}
+              <div class="help">演示环境使用控制台后端（dry_run），服务器日志可见完整邮件</div></td></tr>
+        <tr><th>微信渠道</th>
+            <td>{% if profile.wechat_openid %}<span class="badge ok">已绑定 OpenID</span>{% else %}<span class="badge dry">未绑定 OpenID</span>{% endif %}
+              <div class="help">未配置服务号凭据时输出模板报文预览，不真实外发</div></td></tr>
+        <tr><th>手机号</th><td><span class="badge">不需要</span> 两条通道均不依赖手机号</td></tr>
+      </tbody>
+    </table>
+    {% if nav_profile.is_admin %}
+      <a class="btn ghost sm" href="{% url 'manage_push' %}">配置服务号 AppID / 模板ID</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>每日自动推送（定时任务）</h2>
+  <p class="help">
+    自动链路：定时任务每天定时调用系统的令牌接口取出“今日训练 + 疲劳状态”报文，
+    再转发到微信（Server酱，免费 5 条/天）和邮箱（SMTP）。
+    本部署平台免费版无法直接访问外部 API，所以外发动作由外部定时任务（GitHub Actions，免费）执行，
+    详细配置见 <code>docs/自动推送配置指南.md</code>。
+  </p>
+  {% if cron_url %}
+    <div class="field">
+      <label>令牌接口地址（外部定时任务调用，已含密钥，请勿公开）</label>
+      <input class="input" value="{{ cron_url }}" readonly>
+    </div>
+    <p class="help">在浏览器直接打开该地址可看到返回的每日报文 JSON，用于验证链路。</p>
+  {% else %}
+    <p class="help">
+      当前未配置令牌：在环境变量中设置 <code>CRON_PUSH_TOKEN</code>（一串随机字符串）后重启服务，
+      这里会显示令牌接口地址。
+    </p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>推送日志</h2>
+  <table>
+    <thead><tr><th>时间</th><th>渠道</th><th>接收方</th><th>标题</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+    {% for l in logs %}
+      <tr>
+        <td>{{ l.created_at|date:"m-d H:i" }}</td>
+        <td>{{ l.get_channel_display }}</td>
+        <td>{{ l.target|default:"—" }}</td>
+        <td>{{ l.title }}</td>
+        <td><span class="badge {% if l.status == 'success' %}ok{% elif l.status == 'failed' %}fail{% else %}dry{% endif %}">{{ l.get_status_display }}</span></td>
+        <td class="help">{{ l.error|default:"—" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="help">还没有推送记录</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

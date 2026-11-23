@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}训练打卡 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="grid g2">
+  <div class="card">
+    <h2>训练打卡 <small>第 {{ week_no }} 周</small></h2>
+    <p class="help">填写实际用时、平均心率与 RPE。有心率用心率法算 TRIMP；无心率自动用 sRPE（时长×RPE）替代并标注“心率数据不足”。</p>
+
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors.0 }}</div>{% endif %}
+      <div class="grid g2" style="gap:0 14px">
+        {% for field in form %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="err">{{ field.errors.0 }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">提交打卡并运行规则引擎</button>
+        <a class="btn ghost" href="{% url 'checkin' %}?preset=A">用例A</a>
+        <a class="btn ghost" href="{% url 'checkin' %}?preset=B">用例B</a>
+        <a class="btn ghost" href="{% url 'checkin' %}?preset=C">用例C</a>
+      </div>
+    </form>
+
+    <p class="help" style="margin-top:10px">
+      生理校验：该跑者 HRmax ≈ {{ hr_max }} bpm（Tanaka），输入心率超过 HRmax+5 会被拒绝；
+      配速超出 2′10″–15′00″/km 也会被拒绝，防止脏数据进入负荷计算。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>今日计划课次</h2>
+    {% if today_w %}
+      <p>
+        <span class="badge {{ today_w.wtype }}">{{ today_w.type_label }}</span>
+        <strong>{{ today_w.distance_km|floatformat:1 }} km</strong>
+        · 目标配速 {{ today_w.pace_display }} · 预计 {{ today_w.duration_min }} 分钟
+      </p>
+      <p class="help">{{ today_w.detail }}</p>
+      {% if today_w.is_adjusted %}
+        <div class="msg info">当前生效的是调整版本：{{ today_w.adjust_reason }}</div>
+      {% endif %}
+      <table>
+        <tbody>
+          <tr><th>E 区间心率（59–74% HRR）</th>
+              <td>{{ profile.hr_rest }} → {{ hr_max|floatformat:0 }} bpm 之间，参考 65% HRR</td></tr>
+          <tr><th>HRrest / HRmax</th><td>{{ profile.hr_rest }} / {{ hr_max|floatformat:0 }} bpm</td></tr>
+          <tr><th>今日完成率</th><td>距离 ÷ 计划距离，&lt;80% 记为“未完成”</td></tr>
+        </tbody>
+      </table>
+    {% else %}
+      <p class="help">今天没有排课，仍可补录过去的训练。</p>
+    {% endif %}
+
+    <h2 style="margin-top:18px">演示用例说明</h2>
+    <table>
+      <tbody>
+        <tr><th>A 心率超限</th><td>配速正常、平均心率≈92% HRR → 触发 R03（安全规则，当日降级 + 48h 保护）</td></tr>
+        <tr><th>B 连续未完成</th><td>距离仅 60%、RPE=9，连续两次 → 触发 R05（下周跑量 ×0.9）</td></tr>
+        <tr><th>C 正常完成</th><td>心率落在 E 区间、足量完成 → 可能触发 R06（达标加量 5%，上限 10%）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

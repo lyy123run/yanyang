@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}编辑规则 {{ rule.code }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>编辑规则 {{ rule.code }} · {{ rule.name }}</h2>
+  <p class="help">修改阈值即改配置，保存后引擎下一次打卡立即生效，无需重启或改代码。</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid g2" style="gap:0 14px">
+      {% for field in form %}
+        <div class="field" {% if field.name == 'condition_json' or field.name == 'description' or field.name == 'condition_expr' %}style="grid-column:1/-1"{% endif %}>
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="err">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">保存</button>
+      <a class="btn ghost" href="{% url 'manage_rules' %}">返回规则表</a>
+    </div>
+  </form>
+
+  <h2 style="margin-top:18px">条件树结构说明</h2>
+<pre class="code">{
+  "and": [                       // 合取：全部成立
+    {"fact": "acwr", "op": "gt", "value": 1.5, "label": "ACWR"},
+    {"fact": "tsb",  "op": "lt", "value": -20, "label": "TSB"}
+  ],
+  "or": [ ... ]                  // 析取：任一成立
+}
+可用事实字段：acwr、tsb、acwr_high_streak、weekly_growth、this_week_actual_km、
+next_week_plan_km、hr_hrr_pct、hr_plan_upper、hr_over_plan_delta、is_easy_m、has_hr、
+rpe、completion_rate、completion_rate_2w、low_completion_streak、intensity_within_48h、
+acwr_in_band、is_week_end、safety_triggered
+运算：gt / gte / lt / lte / eq / ne / between / in</pre>
+</div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+
+{% if not plan %}
+<div class="card">
+  <h2>还没有训练计划</h2>
+  <p class="help">系统需要你的 5K 成绩来推算 VDOT 与五区配速，再生成 16 周马拉松课表。</p>
+  <p>
+    <strong>当前 5K 成绩：</strong>
+    {% if profile.five_k_seconds %}{{ profile.five_k_display }}（VDOT ≈ {{ vdot|floatformat:1 }}）{% else %}未填写{% endif %}
+  </p>
+  <a class="btn" href="{% url 'profile' %}">去补全跑者档案</a>
+</div>
+{% else %}
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="stat">
+    <div class="k">VDOT（当前计划）</div>
+    <div class="v vd">{{ plan.vdot|floatformat:1 }}<span class="u">ml/kg/min</span></div>
+    <div class="hint">5K {{ profile.five_k_display }} · HRmax {{ hr_max|default:"—" }}</div>
+  </div>
+  <div class="stat">
+    <div class="k">CTL42 慢性负荷（体能）</div>
+    <div class="v vs">{{ metrics.ctl42|floatformat:1 }}</div>
+    <div class="hint">42 天 TRIMP 指数移动平均{% if metrics.estimated %} · 数据不足 28 天，为估算值{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="k">ATL7 急性负荷（疲劳）</div>
+    <div class="v vw">{{ metrics.atl7|floatformat:1 }}</div>
+    <div class="hint">7 天 TRIMP 指数移动平均</div>
+  </div>
+  <div class="stat">
+    <div class="k">TSB 平衡 / ACWR 负荷比</div>
+    <div class="v {% if metrics.tsb < -20 %}vx{% else %}vd{% endif %}">
+      {{ metrics.tsb|floatformat:1 }} <span class="u">/ {{ metrics.acwr|floatformat:2 }}</span>
+    </div>
+    <div class="hint">{{ metrics.acwr_zone }}</div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="sec-title">
+      <h2>今日课表 <small>第 {{ week_no }} 周 · 共 {{ plan.weeks }} 周</small></h2>
+      <a class="btn ghost sm" href="{% url 'checkin' %}">训练打卡</a>
+    </div>
+    {% if today_w %}
+      {% if today_w.wtype == "REST" %}
+        <p><span class="badge REST">休息</span> 今天安排休息，保证睡眠与恢复。</p>
+        <p class="help">{{ today_w.detail }}</p>
+      {% else %}
+        <p><span class="badge {{ today_w.wtype }}">{{ today_w.type_label }}</span>
+          <strong>{{ today_w.distance_km|floatformat:1 }} km</strong>
+          · 目标配速 <strong>{{ today_w.pace_display }}</strong>
+          · 预计 {{ today_w.duration_min }} 分钟</p>
+        <p class="help">{{ today_w.detail }}</p>
+        {% if today_w.is_adjusted %}
+          <div class="msg info" style="margin-top:8px">本课已按规则调整：{{ today_w.adjust_reason }}（原计划已保留为历史版本）</div>
+        {% endif %}
+      {% endif %}
+    {% else %}
+      <p><span class="badge REST">无安排</span> 今天没有课次，可休息或做交叉训练。</p>
+    {% endif %}
+
+    <div class="chip-row">
+      <span class="help">演示用例：</span>
+      <a class="btn ghost sm" href="{% url 'checkin' %}?preset=C">C 正常完成</a>
+      <a class="btn ghost sm" href="{% url 'checkin' %}?preset=A">A 心率超限</a>
+      <a class="btn ghost sm" href="{% url 'checkin' %}?preset=B">B 未完成计划</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">
+      <h2>最近一次调整解释</h2>
+      <a class="btn ghost sm" href="{% url 'explanations' %}">全部记录</a>
+    </div>
+    {% if latest_explain %}
+      <div class="explain {% if not latest_explain.applied %}skip{% endif %}">
+        <div class="t">
+          {% if latest_explain.rule_code == "NONE" %}无规则命中{% else %}
+            {{ latest_explain.rule_code }} {{ latest_explain.rule.name|default:"" }}{% endif %}
+          <span class="badge {% if latest_explain.applied %}ok{% else %}fail{% endif %}">
+            {% if latest_explain.applied %}已执行{% else %}未执行{% endif %}</span>
+        </div>
+        <div class="m">{{ latest_explain.created_at|date:"m-d H:i" }} · {{ latest_explain.matched_expr|truncatechars:120 }}</div>
+        <div class="a">{{ latest_explain.action_text }}</div>
+        {% if latest_explain.skip_reason %}<div class="m" style="margin-top:4px">未执行原因：{{ latest_explain.skip_reason }}</div>{% endif %}
+      </div>
+    {% else %}
+      <p class="help">还没有调整记录。完成一次打卡后，规则引擎会在这里给出“为什么调整”的可解释说明。</p>
+    {% endif %}
+    <p class="help" style="margin-top:8px">累计跑量 {{ total_km }} km · 打卡 {{ recent|length }} 条最近记录</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title">
+    <h2>负荷曲线 <small>CTL42 / ATL7 / TSB（近 42 天）</small></h2>
+    <span class="pill">数据来源：打卡记录实时聚合</span>
+  </div>
+  <div id="chart" style="height:260px"></div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="sec-title"><h2>本周课表</h2><a class="btn ghost sm" href="{% url 'plan' %}?week={{ week_no }}">查看完整 16 周</a></div>
+    <table>
+      <thead><tr><th>日期</th><th>课型</th><th>距离</th><th>配速</th><th>状态</th></tr></thead>
+      <tbody>
+      {% for item in week_items %}
+        <tr>
+          <td>{{ item.o.date|date:"m-d D" }}</td>
+          <td>
+            <span class="badge {{ item.o.wtype }}">{{ item.o.type_label }}</span>
+            {% if item.eff %}<span class="badge adj">已调整</span>{% endif %}
+          </td>
+          <td>
+            {% if item.eff %}
+              {{ item.eff.distance_km|floatformat:1 }} km
+              <div class="orig">原 {{ item.o.distance_km|floatformat:1 }}</div>
+            {% else %}{{ item.o.distance_km|floatformat:1 }} km{% endif %}
+          </td>
+          <td>{% if item.eff %}{{ item.eff.pace_display }}{% else %}{{ item.o.pace_display }}{% endif %}</td>
+          <td>{{ item.o.get_status_display }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="sec-title"><h2>五区配速表 <small>VDOT {{ plan.vdot|floatformat:1 }}</small></h2></div>
+    <table>
+      <thead><tr><th>区间</th><th>强度</th><th>配速</th></thead>
+      <tbody>
+      {% for z in zones %}
+        <tr><td><span class="badge {{ z.key }}">{{ z.key }}</span> {{ z.label }}</td>
+          <td class="help">{{ z.pct }}</td><td><strong>{{ z.pace }}</strong></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const chart = echarts.init(document.getElementById('chart'));
+  const raw = {{ chart|safe }};
+  const ds = raw.length ? raw : [];
+  chart.setOption({
+    grid:{left:46,right:16,top:26,bottom:28},
+    tooltip:{trigger:'axis'},
+    legend:{top:0,right:0,itemWidth:12,itemHeight:8},
+    xAxis:{type:'category',data:ds.map(d=>d.date.slice(5)),axisLabel:{fontSize:10}},
+    yAxis:{type:'value',scale:true},
+    series:[
+      {name:'CTL42',type:'line',smooth:true,symbol:'none',lineStyle:{width:2,color:'#0e7490'},
+       data:ds.map(d=>d.ctl42)},
+      {name:'ATL7',type:'line',smooth:true,symbol:'none',lineStyle:{width:2,color:'#b45309'},
+       data:ds.map(d=>d.atl7)},
+      {name:'TSB',type:'line',smooth:true,symbol:'none',lineStyle:{width:1.5,color:'#0f766e'},
+       data:ds.map(d=>d.tsb)},
+      {name:'TRIMP',type:'bar',barWidth:3,itemStyle:{color:'#c3d6de'},data:ds.map(d=>d.load)}
+    ]
+  });
+  window.addEventListener('resize',()=>chart.resize());
+</script>
+{% endblock %}

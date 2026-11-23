@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}导入 GPX / TCX{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>手表数据导入 <small>GPX / TCX 文件</small></h2>
+  <p class="help">
+    支持佳明、咕咚等导出的 .gpx / .tcx。后端解析 XML，提取距离、累计用时、平均心率、步频，
+    按时间戳对齐轨迹点计算分段配速，写入 Record 表与 TrackPoint 表；导入后同样会运行规则引擎。
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="err">{{ field.errors.0 }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="form-actions">
+      <button class="btn" type="submit">解析并写入打卡记录</button>
+      <a class="btn ghost" href="{% url 'records' %}">返回记录</a>
+    </div>
+  </form>
+  <p class="help" style="margin-top:12px">
+    说明：部分 GPX 不含心率字段，系统会改用 sRPE 估算负荷并标注“心率数据不足”，
+    此时不会触发 R03 等心率安全规则。
+  </p>
+</div>
+{% endblock %}

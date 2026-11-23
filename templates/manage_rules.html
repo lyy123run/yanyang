@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}规则配置 · 管理端{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>规则表 <small>R01–R06 全部可配置，可新增第 7 条</small></h2>
+  <p class="help">
+    条件以 JSON 条件树存储，引擎运行时逐条求值。新增一条规则只需填写条件树 + 动作类型 + 优先级；
+    系统已预置多种动作类型（降量 / 上限增长 / 加量 / 当日降级 / 强制休息 / 48h 强度保护 / 插入休息日）。
+    当前内置 R01–R06 六条规则；若新增 R07，只要条件里用到的“事实字段”已被引擎采集，即可直接参与判断与冲突消解。
+  </p>
+  <table style="table-layout:fixed">
+    <thead><tr><th style="width:56px">编号</th><th style="width:150px">规则名称</th><th>条件表达式</th>
+      <th style="width:160px">动作</th><th style="width:56px">优先级</th><th style="width:46px">安全</th>
+      <th style="width:76px">尺度</th><th style="width:56px">启用</th><th style="width:56px"></th></tr></thead>
+    <tbody>
+    {% for r in rules %}
+      <tr>
+        <td><strong>{{ r.code }}</strong></td>
+        <td>{{ r.name }}<div class="help" style="font-size:11px">{{ r.source }}</div></td>
+        <td class="help" style="font-size:11px">{{ r.condition_expr }}</td>
+        <td><code>{{ r.action_type }}</code><div class="help" style="font-size:11px">{{ r.action_params }}</div></td>
+        <td>{{ r.priority }}</td>
+        <td>{% if r.safety_flag %}是{% else %}否{% endif %}</td>
+        <td>{{ r.get_scale_display }}</td>
+        <td>{% if r.enabled %}<span class="badge ok">启用</span>{% else %}<span class="badge">停用</span>{% endif %}</td>
+        <td><a class="btn ghost sm" href="{% url 'manage_rule_edit' r.pk %}">编辑</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>新增规则 <small>示例：新增 R07 作为第 7 条规则</small></h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid g3" style="gap:0 14px">
+      {% for field in form %}
+        <div class="field" {% if field.name == 'condition_json' or field.name == 'description' or field.name == 'condition_expr' %}style="grid-column:1/-1"{% endif %}>
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="err">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">保存规则</button>
+      <a class="btn ghost" href="{% url 'manage_home' %}">返回管理端</a>
+    </div>
+  </form>
+
+  <h2 style="margin-top:18px">可直接复制的 R07 示例（连续高 RPE + 负荷偏高 → 下周降量 10%）</h2>
+<pre class="code">code: R07
+name: 主观疲劳偏高降量
+condition_json:
+{"and":[
+  {"fact":"rpe","op":"gte","value":8,"label":"主观疲劳 RPE"},
+  {"fact":"acwr","op":"gt","value":1.2,"label":"ACWR"}
+]}
+action_type: reduce_next_week_volume
+action_params: {"factor":0.9}
+priority: 55
+safety_flag: 否
+scale: 下周(week)
+enabled: 是</pre>
+  <p class="help">说明：R07 使用引擎已采集的 rpe、acwr 事实，添加后即可在打卡时真实参与匹配、冲突消解并生成解释记录。</p>
+</div>
+{% endblock %}

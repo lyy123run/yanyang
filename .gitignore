@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境
+.venv/
+venv/
+
+# Django
+.env
+db.sqlite3
+db.sqlite3-journal
+
+# 静态收集产物（目标机自行 collectstatic）
+staticfiles/
+
+# 系统/编辑器
+.DS_Store
+.vscode/
+.idea/

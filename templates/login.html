@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}登录 · 马拉松自适应训练系统{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>登录训练系统</h1>
+    <p class="sub">跑者查看课表与打卡；管理者进入规则配置后台</p>
+
+    {% if form.non_field_errors %}
+      <div class="msg error">{{ form.non_field_errors.0 }}</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label for="id_username">用户名</label>
+        <input class="input" type="text" name="username" id="id_username"
+               value="{{ form.username.value|default:'' }}" autofocus required>
+      </div>
+      <div class="field">
+        <label for="id_password">密码</label>
+        <input class="input" type="password" name="password" id="id_password" required>
+      </div>
+      <button class="btn" type="submit">登录</button>
+      <a class="btn ghost" href="{% url 'register' %}">注册跑者账号</a>
+    </form>
+
+    <div class="demo-hint">
+      <strong>演示账号</strong><br>
+      跑者：<code>runner</code> / <code>runner123</code><br>
+      管理者：<code>coach</code> / <code>coach123</code>（含 Django 管理后台 /admin/）
+    </div>
+  </div>
+</div>
+{% endblock %}

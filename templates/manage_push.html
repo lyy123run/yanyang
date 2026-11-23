@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}推送渠道配置 · 管理端{% endblock %}
+{% block content %}
+<div class="grid g2">
+  <div class="card">
+    <h2>渠道配置</h2>
+    <p class="help">配置存数据库，未配置真实凭据时推送进入演练模式（dry_run），只生成报文并写日志。</p>
+    {% for c in channels %}
+      <form method="post" style="border-bottom:1px dashed #eef2f5;padding-bottom:14px;margin-bottom:14px">
+        {% csrf_token %}
+        <input type="hidden" name="channel" value="{{ c.channel }}">
+        <h3 style="font-size:14px;margin:0 0 8px">{{ c.get_channel_display }}</h3>
+        <div class="field">
+          <label>配置 JSON</label>
+          <textarea class="input" name="config" rows="6">{{ c.config }}</textarea>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;color:#334b5c;margin-bottom:8px">
+          <input type="checkbox" name="enabled" {% if c.enabled %}checked{% endif %}> 启用该渠道
+        </label>
+        <button class="btn sm" type="submit">保存</button>
+      </form>
+    {% empty %}
+      <p class="help">暂无渠道记录，先运行 seed_demo 初始化。</p>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h2>微信服务号模板消息报文样例</h2>
+    <pre class="code">{{ wechat_tpl }}</pre>
+    <p class="help">
+      邮箱渠道 JSON 示例：<code>{"notify_email": "runner@example.com"}</code>（实际收件人在跑者档案中设置）。<br>
+      微信渠道 JSON 示例：<code>{"appid": "...", "secret": "...", "template_id": "...", "link_url": "https://..."}</code>。
+      个人订阅号无模板消息权限，需认证服务号（或微信公众平台测试号用于联调）。
+    </p>
+    <h3 style="font-size:14px">为什么不需要手机号</h3>
+    <table>
+      <tbody>
+        <tr><th style="width:110px">邮箱推送</th><td>标识是用户邮箱地址，走 SMTP 协议</td></tr>
+        <tr><th>微信推送</th><td>标识是服务号 OpenID（授权后获得），不是手机号</td></tr>
+        <tr><th>手机号</th><td>只用于短信通道，本系统未采用短信</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

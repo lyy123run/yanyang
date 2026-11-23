@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}打卡结果与调整解释{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="sec-title">
+    <h2>打卡已记录 <small>{{ record.date }} · {{ record.distance_km|floatformat:1 }} km · {{ record.duration_min|floatformat:0 }} 分钟</small></h2>
+    <a class="btn ghost sm" href="{% url 'plan' %}?week={{ week_no|add:1 }}">查看下周课表</a>
+  </div>
+  <div class="grid g4">
+    <div class="stat"><div class="k">平均心率 / RPE</div>
+      <div class="v" style="font-size:18px">{{ record.avg_hr|default:"—" }} <span class="u">bpm</span> / {{ record.rpe }}</div>
+      <div class="hint">实际配速 {{ record.pace_display }}</div></div>
+    <div class="stat"><div class="k">本次训练负荷</div>
+      <div class="v" style="font-size:18px">{{ record.trimp|floatformat:1 }}</div>
+      <div class="hint">{{ record.get_load_method_display }}</div></div>
+    <div class="stat"><div class="k">完成率</div>
+      <div class="v" style="font-size:18px">{{ record.completion_pct }}%</div>
+      <div class="hint">按当日计划距离计算</div></div>
+    <div class="stat"><div class="k">命中规则</div>
+      <div class="v" style="font-size:18px">{{ applied|length }} <span class="u">执行</span> / {{ skipped|length }} <span class="u">未执行</span></div>
+      <div class="hint">未执行规则同样留痕</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>事实输入快照</h2>
+  <div class="factgrid">
+    <div class="fact"><div class="k">心率（%HRR）</div><div class="v">{{ facts.hr_hrr_pct|default:"—" }}%</div></div>
+    <div class="fact"><div class="k">ACWR</div><div class="v">{{ facts.acwr|default:"—" }}</div></div>
+    <div class="fact"><div class="k">TSB</div><div class="v">{{ facts.tsb|default:"—" }}</div></div>
+    <div class="fact"><div class="k">周跑量增幅</div><div class="v">{% widthratio facts.weekly_growth 1 100 %}%</div></div>
+    <div class="fact"><div class="k">低完成连续次数</div><div class="v">{{ facts.low_completion_streak|default:"0" }}</div></div>
+    <div class="fact"><div class="k">ACWR 高危连续天</div><div class="v">{{ facts.acwr_high_streak|default:"0" }}</div></div>
+    <div class="fact"><div class="k">近两周完成率</div><div class="v">{% widthratio facts.completion_rate_2w 1 100 %}%</div></div>
+    <div class="fact"><div class="k">48h 内强度课</div><div class="v">{% if facts.intensity_within_48h %}是{% else %}否{% endif %}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>规则引擎判断结果</h2>
+  {% if no_match %}
+    <div class="msg info">本次打卡未触发任何调整规则，系统维持当前计划（这是系统正常运行的常态分支）。</div>
+  {% endif %}
+
+  {% for e in applied %}
+    <div class="explain">
+      <div class="t">{{ e.rule_code }} {{ e.rule.name|default:"" }}
+        <span class="badge ok">已执行</span></div>
+      <div class="m">匹配条件：{{ e.matched_expr }}</div>
+      <div class="a"><strong>执行动作：</strong>{{ e.action_text }}</div>
+      {% if e.affected_dates %}<div class="m">受影响课次：{{ e.affected_dates }}</div>{% endif %}
+      {% if e.conflicts %}
+        <div class="m">冲突集：{% for c in e.conflicts %}{{ c.code }}({{ c.priority }}{% if c.safety %}/安全{% endif %}) {% endfor %}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  {% for e in skipped %}
+    <div class="explain skip">
+      <div class="t">{{ e.rule_code }} {{ e.rule.name|default:"" }}
+        <span class="badge fail">未执行</span></div>
+      <div class="m">{{ e.matched_expr }}</div>
+      <div class="m">原因：{{ e.skip_reason }}</div>
+    </div>
+  {% endfor %}
+
+  {% if not applied and not skipped and not no_match %}
+    <p class="help">无解释记录。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>下周课表当前状态 <small>第 {{ week_no|add:1 }} 周</small></h2>
+  <table>
+    <thead><tr><th>日期</th><th>课型</th><th>距离</th><th>配速</th><th>变化</th></tr></thead>
+    <tbody>
+    {% for item in next_week %}
+      <tr>
+        <td>{{ item.o.date|date:"m-d D" }}</td>
+        <td><span class="badge {{ item.eff.wtype|default:item.o.wtype }}">{% if item.eff %}{{ item.eff.type_label }}{% else %}{{ item.o.type_label }}{% endif %}</span></td>
+        <td>{% if item.eff %}<strong>{{ item.eff.distance_km|floatformat:1 }}</strong> <span class="orig">原 {{ item.o.distance_km|floatformat:1 }}</span>{% else %}{{ item.o.distance_km|floatformat:1 }}{% endif %} km</td>
+        <td>{% if item.eff %}{{ item.eff.pace_display }}{% else %}{{ item.o.pace_display }}{% endif %}</td>
+        <td>{% if item.eff %}<span class="diff">{{ item.eff.adjust_reason }}</span>{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="form-actions" style="margin-top:12px">
+    <a class="btn" href="{% url 'checkin' %}">继续打卡</a>
+    <a class="btn ghost" href="{% url 'explanations' %}">查看全部解释日志</a>
+    <a class="btn ghost" href="{% url 'push_center' %}">推送本次计划</a>
+  </div>
+</div>
+{% endblock %}
