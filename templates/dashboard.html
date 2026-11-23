@@ -14,6 +14,14 @@
 </div>
 {% else %}
 
+<div class="fatigue {{ status.level }}">
+  <span class="dot"></span>
+  <div>
+    <div class="ft-label">今日状态：{{ status.label }}</div>
+    <div class="ft-meta">{{ status.reason }}{% if status.advice %}；建议：{{ status.advice }}{% endif %}</div>
+  </div>
+</div>
+
 <div class="grid g4" style="margin-bottom:16px">
   <div class="stat">
     <div class="k">VDOT（当前计划）</div>

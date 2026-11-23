@@ -123,3 +123,20 @@ pre.code{background:#0f1b22;color:#cfe3ee;padding:14px;border-radius:10px;overfl
 .sec-title h2{margin:0}
 button.logout{background:none;border:0;color:#6b7b88;font-size:13px;cursor:pointer;padding:0;font-family:inherit}
 button.logout:hover{color:#0e7490;text-decoration:underline}
+
+.fatigue{display:flex;gap:14px;align-items:flex-start;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid var(--line);background:#fff}
+.fatigue .dot{width:14px;height:14px;border-radius:50%;margin-top:5px;flex:none}
+.fatigue .ft-label{font-size:17px;font-weight:700}
+.fatigue .ft-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.fatigue.green{background:#f0faf5;border-color:#bfe3da}
+.fatigue.green .dot{background:#0f766e}
+.fatigue.green .ft-label{color:#0b5b4d}
+.fatigue.yellow{background:#fff8ec;border-color:#f0d6ac}
+.fatigue.yellow .dot{background:#b45309}
+.fatigue.yellow .ft-label{color:#8a5312}
+.fatigue.red{background:#fdeeee;border-color:#f3c2c2}
+.fatigue.red .dot{background:#b91c1c}
+.fatigue.red .ft-label{color:#8f1d1d}
+.fatigue.gray{background:#f5f7f9}
+.fatigue.gray .dot{background:#93a2ad}
+.fatigue.gray .ft-label{color:#4a5f6d}

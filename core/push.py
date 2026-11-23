@@ -16,6 +16,7 @@ from django.core.mail import send_mail
 from datetime import date, timedelta
 
 from .models import Plan, Profile, PushConfig, PushLog, Record, Workout
+from .status import fatigue_status
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,8 @@ def build_report(user, plan, metrics=None):
         recs = list(Record.objects.filter(user=user, date__lte=today))
         metrics = load_metrics(recs, end_date=today)
 
-    lines = [f"【第 {week_no} 周训练计划】{week_start:%m-%d} ~ {week_end:%m-%d}"]
+    lines = [fatigue_status(metrics)["text"],
+             f"【第 {week_no} 周训练计划】{week_start:%m-%d} ~ {week_end:%m-%d}"]
     for w in workouts:
         eff = adj_map.get(w.id)
         if eff and eff.wtype != w.wtype:
@@ -215,19 +217,14 @@ def build_daily_report(user, plan, metrics=None):
         y_line = "昨日无打卡记录"
 
     acwr = metrics["acwr"]
-    if acwr > 1.5:
-        warn = "疲劳预警：ACWR 超过 1.5，注意控制强度、保证睡眠"
-    elif metrics["tsb"] < -20:
-        warn = "疲劳预警：TSB 低于 -20，近期以恢复为主"
-    else:
-        warn = "负荷状态正常，按计划执行即可"
+    status = fatigue_status(metrics)
 
     lines = [
+        status["text"],
         plan_line,
         y_line,
         f"疲劳指标：CTL42={metrics['ctl42']:.1f}，ATL7={metrics['atl7']:.1f}，"
         f"TSB={metrics['tsb']:.1f}，ACWR={acwr:.2f}（{metrics['acwr_zone']}）",
-        warn,
     ]
     if metrics.get("estimated"):
         lines.append("提示：数据不足 28 天，指标为估算值，持续打卡后自动收敛。")

@@ -20,6 +20,7 @@ from . import imports as gpx_imports
 from . import load as load_mod
 from . import planner, push
 from . import rules as rule_engine
+from . import status as status_mod
 from . import vdot as vd
 from .forms import CheckinForm, GPXUploadForm, ProfileForm, RegisterForm, RuleForm
 from .models import (ExplanationRecord, Plan, Profile, PushConfig, PushLog, Record, Rule,
@@ -173,6 +174,7 @@ def dashboard(request):
     chart = metrics.get("curve", [])[-42:]
     return render(request, "dashboard.html", {
         "profile": profile, "plan": plan, "week_no": week_no, "metrics": metrics,
+        "status": status_mod.fatigue_status(metrics),
         "today_w": today_w, "week_items": week_items,
         "recent": Record.objects.filter(user=request.user).order_by("-date")[:5],
         "latest_explain": latest_explain,
